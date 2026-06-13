@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,13 +31,10 @@
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                        <img src="../static/images/liveb-logo-azul.svg" onerror="this.src='../static/images/liveb-logo.png'" alt="Liveb" class="w-8 h-8 object-contain">
+                        <i class="bi bi-calculator text-primary text-lg"></i>
                     </div>
                     <h1 class="text-white font-bold text-lg">Calculadora de Fiança</h1>
                 </div>
-                <a href="login/index.html" class="text-white/80 hover:text-white transition-colors flex items-center gap-2 text-sm">
-                    <i class="bi bi-box-arrow-right"></i> Sair
-                </a>
             </div>
         </div>
     </nav>
@@ -384,9 +381,8 @@
                 <div>
                     <h5 class="font-bold mb-3">Links Úteis</h5>
                     <ul class="text-sm text-slate-400 space-y-2">
-                        <li><a href="login/index.html" class="hover:text-white transition-colors">Painel de Login</a></li>
-                        <li><a href="../index.html" class="hover:text-white transition-colors">Início</a></li>
-                        <li><a href="../seja-parceiro/index.html" class="hover:text-white transition-colors">Seja Parceiro</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Documentação</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Suporte</a></li>
                     </ul>
                 </div>
                 <div>
@@ -404,46 +400,8 @@
     </footer>
 
     <script>
-        // ===== CALCULADORA FINANCEIRA =====
-        // Classes e Funções baseadas em CalculadoraFinanceira.java
-
-        class CalculadoraFinanceira {
-            calcularPacoteLocacao(aluguel, condominio, iptu) {
-                if (aluguel <= 0) throw new Error("Valor do aluguel deve ser positivo");
-                if (condominio < 0) throw new Error("Condomínio não pode ser negativo");
-                if (iptu < 0) throw new Error("IPTU não pode ser negativo");
-                return aluguel + condominio + iptu;
-            }
-
-            calcularSeguroFianca(pacoteLocacao, taxaPercentual) {
-                if (pacoteLocacao <= 0) throw new Error("Pacote de locação deve ser positivo");
-                if (taxaPercentual <= 0 || taxaPercentual > 15)
-                    throw new Error("Taxa deve estar entre 0 e 15%");
-                return pacoteLocacao * 12 * (taxaPercentual / 100);
-            }
-
-            calcularSeguroMensal(valorSeguroAnual, parcelas) {
-                if (valorSeguroAnual <= 0) throw new Error("Valor do seguro anual deve ser positivo");
-                if (parcelas <= 0 || parcelas > 12) throw new Error("Parcelas deve ser entre 1 e 12");
-                return valorSeguroAnual / parcelas;
-            }
-
-            verificarRendaMinima(rendaBruta, aluguel, multiplicador) {
-                if (rendaBruta <= 0 || aluguel <= 0)
-                    throw new Error("Renda e aluguel devem ser positivos");
-                if (multiplicador < 3.0 || multiplicador > 4.0)
-                    throw new Error("Multiplicador deve estar entre 3 e 4");
-                return rendaBruta >= (aluguel * multiplicador);
-            }
-
-            comprometimentoMaximoRenda(rendaMensal, pacoteLocacao) {
-                if (rendaMensal <= 0 || pacoteLocacao <= 0)
-                    throw new Error("Renda e pacote devem ser positivos");
-                return (pacoteLocacao / rendaMensal) * 100;
-            }
-        }
-
-        const calc = new CalculadoraFinanceira();
+        // ===== CALCULADORA FINANCEIRA COM THYMELEAF =====
+        // Integração com endpoints REST da CalculadoraService
 
         // Função auxiliar para formatar moeda
         function formatarMoeda(valor) {
@@ -454,7 +412,7 @@
         }
 
         // ===== SEÇÃO 1: Pacote de Locação =====
-        function calcularPacote() {
+        async function calcularPacote() {
             try {
                 const aluguel = parseFloat(document.getElementById('aluguel').value);
                 const condominio = parseFloat(document.getElementById('condominio').value) || 0;
@@ -465,7 +423,14 @@
                     return;
                 }
 
-                const resultado = calc.calcularPacoteLocacao(aluguel, condominio, iptu);
+                const response = await fetch('/api/calculadora/pacote?' + new URLSearchParams({
+                    aluguel: aluguel,
+                    condominio: condominio,
+                    iptu: iptu
+                }), { method: 'POST' });
+
+                if (!response.ok) throw new Error('Erro na requisição');
+                const resultado = await response.json();
 
                 document.getElementById('resultado1-valor').textContent = formatarMoeda(resultado);
                 document.getElementById('resultado1').classList.remove('hidden');
@@ -475,7 +440,7 @@
         }
 
         // ===== SEÇÃO 2: Seguro de Fiança Anual =====
-        function calcularSeguroAnual() {
+        async function calcularSeguroAnual() {
             try {
                 const pacote = parseFloat(document.getElementById('pacoteParaSeguro').value);
                 const taxa = parseFloat(document.getElementById('taxaSeguro').value);
@@ -490,7 +455,13 @@
                     return;
                 }
 
-                const resultado = calc.calcularSeguroFianca(pacote, taxa);
+                const response = await fetch('/api/calculadora/seguro?' + new URLSearchParams({
+                    pacote: pacote,
+                    taxa: taxa
+                }), { method: 'POST' });
+
+                if (!response.ok) throw new Error('Erro na requisição');
+                const resultado = await response.json();
 
                 document.getElementById('resultado2-valor').textContent = formatarMoeda(resultado);
                 document.getElementById('resultado2').classList.remove('hidden');
@@ -500,7 +471,7 @@
         }
 
         // ===== SEÇÃO 3: Parcela Mensal =====
-        function calcularParcelaMensal() {
+        async function calcularParcelaMensal() {
             try {
                 const valorAnual = parseFloat(document.getElementById('valorSeguroAnual').value);
                 const parcelas = parseInt(document.getElementById('numParcelas').value);
@@ -515,7 +486,13 @@
                     return;
                 }
 
-                const resultado = calc.calcularSeguroMensal(valorAnual, parcelas);
+                const response = await fetch('/api/calculadora/seguro-mensal?' + new URLSearchParams({
+                    valorSeguroAnual: valorAnual,
+                    parcelas: parcelas
+                }), { method: 'POST' });
+
+                if (!response.ok) throw new Error('Erro na requisição');
+                const resultado = await response.json();
 
                 document.getElementById('resultado3-valor').textContent = formatarMoeda(resultado);
                 document.getElementById('resultado3').classList.remove('hidden');
@@ -525,7 +502,7 @@
         }
 
         // ===== SEÇÃO 4: Verificação de Renda Mínima =====
-        function verificarRendaMinima() {
+        async function verificarRendaMinima() {
             try {
                 const renda = parseFloat(document.getElementById('rendaBruta').value);
                 const aluguel = parseFloat(document.getElementById('aluguelVerificacao').value);
@@ -536,7 +513,14 @@
                     return;
                 }
 
-                const aprovado = calc.verificarRendaMinima(renda, aluguel, multiplicador);
+                const response = await fetch('/api/calculadora/renda-minima?' + new URLSearchParams({
+                    rendaBruta: renda,
+                    aluguel: aluguel,
+                    multiplicador: multiplicador
+                }), { method: 'POST' });
+
+                if (!response.ok) throw new Error('Erro na requisição');
+                const aprovado = await response.json();
                 const minimo = aluguel * multiplicador;
 
                 const resultado4 = document.getElementById('resultado4');
@@ -547,7 +531,6 @@
                 if (aprovado) {
                     resultado4.classList.remove('border-red-200', 'bg-red-50');
                     resultado4.classList.add('border-green-200', 'bg-green-50');
-                    icone.textContent = '';
                     icone.className = 'bi bi-check-circle-fill text-green-600';
                     texto.className = 'font-bold text-lg text-green-700';
                     texto.textContent = '✓ Renda aprovada';
@@ -567,7 +550,7 @@
         }
 
         // ===== SEÇÃO 5: Comprometimento de Renda =====
-        function calcularComprometimento() {
+        async function calcularComprometimento() {
             try {
                 const renda = parseFloat(document.getElementById('rendaMensal').value);
                 const pacote = parseFloat(document.getElementById('pacoteComprometimento').value);
@@ -577,8 +560,13 @@
                     return;
                 }
 
-                const percentual = calc.comprometimentoMaximoRenda(renda, pacote);
-                const aprovado = percentual <= 30;
+                const response = await fetch('/api/calculadora/comprometimento?' + new URLSearchParams({
+                    rendaMensal: renda,
+                    pacoteLocacao: pacote
+                }), { method: 'POST' });
+
+                if (!response.ok) throw new Error('Erro na requisição');
+                const percentual = await response.json();
 
                 const resultado5 = document.getElementById('resultado5');
                 const percentualEl = document.getElementById('resultado5-percentual');
